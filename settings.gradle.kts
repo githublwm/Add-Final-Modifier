@@ -1,1 +1,1 @@
-rootProject.name = "lwm-plugins"
+rootProject.name = "add-final-modifier"
