@@ -7,11 +7,11 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.intellij.psi.util.PsiUtil;
 import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * @author longwm
@@ -19,12 +19,12 @@ import java.util.Objects;
 public class AddFinalIntention implements IntentionAction {
     @Override
     public @IntentionName @NotNull String getText() {
-        return "给方法参数和局部变量添加final修饰";
+        return "Add final modifier(添加final修饰)";
     }
 
     @Override
     public @NotNull @IntentionFamilyName String getFamilyName() {
-        return "添加final修饰";
+        return "Add final modifier";
     }
 
     @Override
@@ -37,30 +37,27 @@ public class AddFinalIntention implements IntentionAction {
         final PsiElement element = file.findElementAt(editor.getCaretModel().getOffset());
 
         final PsiMethod method = PsiTreeUtil.getParentOfType(element, PsiMethod.class);
-        if (method == null) {
-            return;
+        if (method != null) {
+            final PsiParameterList parameterList = method.getParameterList();
+            Arrays.stream(parameterList.getParameters())
+                    .forEach(psiParameter -> PsiUtil.setModifierProperty(psiParameter, PsiModifier.FINAL, true));
+            final PsiCodeBlock methodBody = method.getBody();
+            if (methodBody != null) {
+                final PsiStatement[] statements = methodBody.getStatements();
+                Arrays.stream(statements)
+                        .filter(PsiDeclarationStatement.class::isInstance)
+                        .map(psiStatement -> ((PsiDeclarationStatement) psiStatement).getDeclaredElements())
+                        .flatMap(Arrays::stream)
+                        .filter(PsiLocalVariable.class::isInstance)
+                        .forEach(psiElement -> PsiUtil.setModifierProperty((PsiLocalVariable) psiElement, PsiModifier.FINAL, true));
+            }
         }
-        final PsiParameterList parameterList = method.getParameterList();
 
-        Arrays.stream(parameterList.getParameters())
-                .map(PsiModifierListOwner::getModifierList).filter(Objects::nonNull)
-                .forEach(psiModifierList -> psiModifierList.setModifierProperty(PsiModifier.FINAL, true));
-
-        final PsiCodeBlock methodBody = method.getBody();
-        if (methodBody == null) {
-            return;
+        final PsiVariable psiVariable = PsiTreeUtil.getParentOfType(element, PsiVariable.class);
+        if (psiVariable != null) {
+            PsiUtil.setModifierProperty(psiVariable, PsiModifier.FINAL, true);
         }
-        final PsiStatement[] statements = methodBody.getStatements();
 
-        Arrays.stream(statements)
-                .filter(PsiDeclarationStatement.class::isInstance)
-                .map(psiStatement -> ((PsiDeclarationStatement) psiStatement).getDeclaredElements())
-                .flatMap(Arrays::stream)
-                .filter(PsiLocalVariable.class::isInstance)
-                .forEach(psiElement -> {
-                    final PsiModifierList modifierList = ((PsiLocalVariable) psiElement).getModifierList();
-                    modifierList.setModifierProperty(PsiModifier.FINAL, true);
-                });
     }
 
     @Override

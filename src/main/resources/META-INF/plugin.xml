@@ -13,6 +13,4 @@
         </intentionAction>
     </extensions>
 
-    <applicationListeners>
-    </applicationListeners>
 </idea-plugin>
