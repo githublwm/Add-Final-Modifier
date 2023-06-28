@@ -1,7 +1,9 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
-# lwm-plugins Changelog
+# add-final-modifier Changelog
 
-## [Unreleased]
-### Added
-- Initial scaffold created from [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template)
+## 0.1.1 - 2023-06-28
+
+### Fixed
+- 修复在非Java代码中仍然显示意图的问题
+
