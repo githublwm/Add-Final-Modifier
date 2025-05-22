@@ -9,26 +9,29 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
 
     private static final String INTENTION_TEXT = "Add final modifier(添加final修饰)";
 
-    private void doTest(String before, String after) {
-        myFixture.configureByText("Test.java", before.replace("<caret>", "<caret>")); // Ensure caret is processed
+    private void doTest(final String before, final String after) {
+        assertTrue("Test code must contain <caret>", before.contains("<caret>"));
+        myFixture.configureByText("Test.java", before);
         final IntentionAction intention = myFixture.findSingleIntention(INTENTION_TEXT);
         assertNotNull("Intention '" + INTENTION_TEXT + "' not found", intention);
         myFixture.launchAction(intention);
         myFixture.checkResult(after);
     }
 
-    private void doTestNotAvailable(String content) {
-        myFixture.configureByText("Test.java", content.replace("<caret>", "<caret>")); // Ensure caret is processed
-        List<IntentionAction> intentions = myFixture.getAvailableIntentions();
-        List<String> intentionTexts = intentions.stream()
-                                                .map(IntentionAction::getText)
-                                                .collect(Collectors.toList());
+    private void doTestNotAvailable(final String content) {
+        assertTrue("Test code must contain <caret>", content.contains("<caret>"));
+        myFixture.configureByText("Test.java", content);
+        final List<IntentionAction> intentions = myFixture.getAvailableIntentions();
+        final List<String> intentionTexts = intentions.stream()
+                .map(IntentionAction::getText)
+                .collect(Collectors.toList());
         assertFalse("Intention '" + INTENTION_TEXT + "' should not be available. Available: " + intentionTexts,
                     intentionTexts.contains(INTENTION_TEXT));
     }
-    
-    private void doTestNoChange(String contentWithCaret) {
-        String contentWithoutCaret = contentWithCaret.replace("<caret>", "");
+
+    private void doTestNoChange(final String contentWithCaret) {
+        assertTrue("Test code must contain <caret>", contentWithCaret.contains("<caret>"));
+        final String contentWithoutCaret = contentWithCaret.replace("<caret>", "");
         myFixture.configureByText("Test.java", contentWithCaret);
         // Attempt to find the intention. It should be available.
         final IntentionAction intention = myFixture.findSingleIntention(INTENTION_TEXT);
@@ -38,23 +41,23 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
     }
 
     public void testAddFinalToSingleParameter() {
-        String before = "class Test {\n" +
+        final String before = "class Test {\n" +
                         "    void method(String pa<caret>ram1, int param2) {}\n" +
                         "}";
-        String after = "class Test {\n" +
+        final String after = "class Test {\n" +
                        "    void method(final String param1, int param2) {}\n" +
                        "}";
         doTest(before, after);
     }
 
     public void testAddFinalToSingleLocalVariable() {
-        String before = "class Test {\n" +
+        final String before = "class Test {\n" +
                         "    void method() {\n" +
                         "        String l<caret>ocal1 = \"hello\";\n" +
                         "        int local2 = 10;\n" +
                         "    }\n" +
                         "}";
-        String after = "class Test {\n" +
+        final String after = "class Test {\n" +
                        "    void method() {\n" +
                        "        final String local1 = \"hello\";\n" +
                        "        int local2 = 10;\n" +
@@ -65,7 +68,7 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
 
     public void testAddFinalToAllInMethodScope() {
         // Caret is removed in 'after' string by checkResult implicitly if not present.
-        String before = "class Test {\n" +
+        final String before = "class Test {\n" +
                         "    void method(String param1, int param2) {\n" +
                         "        <caret>\n" +
                         "        String local1 = \"hello\";\n" +
@@ -73,9 +76,9 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
                         "        final String alreadyFinal = \"done\";\n" +
                         "    }\n" +
                         "}";
-        String after = "class Test {\n" +
+        final String after = "class Test {\n" +
                        "    void method(final String param1, final int param2) {\n" +
-                       "        \n" + 
+                       "        \n" +
                        "        final String local1 = \"hello\";\n" +
                        "        final int local2 = 10;\n" +
                        "        final String alreadyFinal = \"done\";\n" +
@@ -85,7 +88,7 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
     }
 
     public void testNotAvailableOnAlreadyFinalParameter() {
-        String content = "class Test {\n" +
+        final String content = "class Test {\n" +
                          "    void method(final String pa<caret>ram1) {}\n" +
                          "}";
         // As per current isAvailable & invoke logic, intention is available but makes no change.
@@ -93,7 +96,7 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
     }
 
     public void testNotAvailableOnAlreadyFinalLocalVariable() {
-        String content = "class Test {\n" +
+        final String content = "class Test {\n" +
                          "    void method() {\n" +
                          "        final String lo<caret>cal1 = \"hello\";\n" +
                          "    }\n" +
@@ -101,36 +104,36 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
         // As per current isAvailable & invoke logic, intention is available but makes no change.
         doTestNoChange(content);
     }
-    
+
     public void testNotAvailableOnClassDeclaration() {
-        String content = "class Te<caret>st {\n" +
+        final String content = "class Te<caret>st {\n" +
                          "    void method(String param1) {}\n" +
                          "}";
         doTestNotAvailable(content);
     }
 
     public void testNotAvailableInImportStatement() {
-        String content = "import ja<caret>va.util.List;\n" +
+        final String content = "import ja<caret>va.util.List;\n" +
                          "class Test {\n" +
                          "    void method(String param1) {}\n" +
                          "}";
         doTestNotAvailable(content);
     }
-    
+
     public void testNotAvailableOnFieldName() {
         // The current isAvailable will make it available for fields.
         // The invoke method will make the field final.
-        String before = "class Test {\n" +
+        final String before = "class Test {\n" +
                         "    String myFi<caret>eld = \"value\";\n" +
                         "}";
-        String after = "class Test {\n" +
+        final String after = "class Test {\n" +
                        "    final String myField = \"value\";\n" +
                        "}";
         doTest(before, after);
     }
 
     public void testNotAvailableOnAlreadyFinalFieldName() {
-        String content = "class Test {\n" +
+        final String content = "class Test {\n" +
                          "    final String myFi<caret>eld = \"value\";\n" +
                          "}";
         // Intention should be available (based on isAvailable) but do nothing (based on invoke)
@@ -141,6 +144,6 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
     @Override
     protected String getTestDataPath() {
         // Not using testData files for these tests, so path can be empty or root.
-        return ""; 
+        return "";
     }
 }
