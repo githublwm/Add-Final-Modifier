@@ -12,6 +12,7 @@ import com.intellij.util.IncorrectOperationException;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * @author longwm
@@ -29,35 +30,60 @@ public class AddFinalIntention implements IntentionAction {
 
     @Override
     public boolean isAvailable(@NotNull Project project, Editor editor, PsiFile file) {
-        return file instanceof PsiJavaFile;
+        if (!(file instanceof PsiJavaFile)) {
+            return false;
+        }
+        final PsiElement element = file.findElementAt(editor.getCaretModel().getOffset());
+        if (element == null) {
+            return false;
+        }
+
+        if (element instanceof PsiVariable) {
+            return true;
+        }
+
+        return PsiTreeUtil.getParentOfType(element, PsiMethod.class) != null;
     }
 
     @Override
     public void invoke(@NotNull Project project, Editor editor, PsiFile file) throws IncorrectOperationException {
         final PsiElement element = file.findElementAt(editor.getCaretModel().getOffset());
+        if (element == null) {
+            return;
+        }
 
-        final PsiMethod method = PsiTreeUtil.getParentOfType(element, PsiMethod.class);
-        if (method != null) {
-            final PsiParameterList parameterList = method.getParameterList();
-            Arrays.stream(parameterList.getParameters())
-                    .forEach(psiParameter -> PsiUtil.setModifierProperty(psiParameter, PsiModifier.FINAL, true));
-            final PsiCodeBlock methodBody = method.getBody();
+        PsiVariable specificVariable = PsiTreeUtil.getParentOfType(element, PsiVariable.class, false);
+        if (specificVariable != null) {
+            addFinalModifierIfNotPresent(specificVariable);
+            return; 
+        }
+
+        final PsiMethod containingMethod = PsiTreeUtil.getParentOfType(element, PsiMethod.class);
+        if (containingMethod != null) {
+            // Add final to parameters
+            final PsiParameterList parameterList = containingMethod.getParameterList();
+            for (PsiParameter parameter : parameterList.getParameters()) {
+                addFinalModifierIfNotPresent(parameter);
+            }
+
+            // Add final to local variables
+            final PsiCodeBlock methodBody = containingMethod.getBody();
             if (methodBody != null) {
-                final PsiStatement[] statements = methodBody.getStatements();
-                Arrays.stream(statements)
-                        .filter(PsiDeclarationStatement.class::isInstance)
-                        .map(psiStatement -> ((PsiDeclarationStatement) psiStatement).getDeclaredElements())
-                        .flatMap(Arrays::stream)
-                        .filter(PsiLocalVariable.class::isInstance)
-                        .forEach(psiElement -> PsiUtil.setModifierProperty((PsiLocalVariable) psiElement, PsiModifier.FINAL, true));
+                Collection<PsiLocalVariable> localVariables = PsiTreeUtil.collectElementsOfType(methodBody, PsiLocalVariable.class);
+                for (PsiLocalVariable localVariable : localVariables) {
+                    addFinalModifierIfNotPresent(localVariable);
+                }
             }
         }
+    }
 
-        final PsiVariable psiVariable = PsiTreeUtil.getParentOfType(element, PsiVariable.class);
-        if (psiVariable != null) {
-            PsiUtil.setModifierProperty(psiVariable, PsiModifier.FINAL, true);
+    private void addFinalModifierIfNotPresent(PsiModifierListOwner element) {
+        if (element != null) {
+            PsiModifierList modifierList = element.getModifierList();
+            if (modifierList != null && !modifierList.hasExplicitModifier(PsiModifier.FINAL)) {
+                PsiUtil.setModifierProperty(element, PsiModifier.FINAL, true);
+            }
         }
-
     }
 
     @Override
