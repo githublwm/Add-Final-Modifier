@@ -2,6 +2,11 @@
 
 # add-final-modifier Changelog
 
+## 0.1.3 - 2025-05-22
+
+### Added
+- Updated the intention logic to better handle final modifier additions for fields, variables
+
 ## 0.1.2 - 2023-07-27
 
 ### Added
