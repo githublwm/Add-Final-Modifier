@@ -105,11 +105,22 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
         doTestNoChange(content);
     }
 
-    public void testNotAvailableOnClassDeclaration() {
-        final String content = "class Te<caret>st {\n" +
-                         "    void method(String param1) {}\n" +
+    public void testAvailableOnClassDeclaration() {
+        final String before = "class Te<caret>st {\n" +
+                         "    String field1 = \"initialized\";\n" +
+                         "    String field2;\n" +
+                         "    void method(String param1) {\n" +
+                         "        String local1 = \"hello\";\n" +
+                         "    }\n" +
                          "}";
-        doTestNotAvailable(content);
+        final String after = "class Test {\n" +
+                        "    final String field1 = \"initialized\";\n" +
+                        "    String field2;\n" +
+                        "    void method(final String param1) {\n" +
+                        "        final String local1 = \"hello\";\n" +
+                        "    }\n" +
+                        "}";
+        doTest(before, after);
     }
 
     public void testNotAvailableInImportStatement() {
@@ -138,6 +149,118 @@ public class AddFinalIntentionTest extends LightJavaCodeInsightFixtureTestCase {
                          "}";
         // Intention should be available (based on isAvailable) but do nothing (based on invoke)
         doTestNoChange(content);
+    }
+
+    // 测试类属性添加 final 的各种场景
+    
+    public void testFieldWithInitializer() {
+        final String before = "class Test {\n" +
+                        "    String fi<caret>eld = \"initialized\";\n" +
+                        "}";
+        final String after = "class Test {\n" +
+                       "    final String field = \"initialized\";\n" +
+                       "}";
+        doTest(before, after);
+    }
+    
+    public void testFieldInitializedInConstructor() {
+        final String before = "class Test {\n" +
+                        "    String fi<caret>eld;\n" +
+                        "    Test() {\n" +
+                        "        field = \"initialized\";\n" +
+                        "    }\n" +
+                        "}";
+        final String after = "class Test {\n" +
+                       "    final String field;\n" +
+                       "    Test() {\n" +
+                       "        field = \"initialized\";\n" +
+                       "    }\n" +
+                       "}";
+        doTest(before, after);
+    }
+    
+    public void testFieldInitializedInMultipleConstructors() {
+        final String before = "class Test {\n" +
+                        "    String fi<caret>eld;\n" +
+                        "    Test() {\n" +
+                        "        field = \"default\";\n" +
+                        "    }\n" +
+                        "    Test(String value) {\n" +
+                        "        field = value;\n" +
+                        "    }\n" +
+                        "}";
+        final String after = "class Test {\n" +
+                       "    final String field;\n" +
+                       "    Test() {\n" +
+                       "        field = \"default\";\n" +
+                       "    }\n" +
+                       "    Test(String value) {\n" +
+                       "        field = value;\n" +
+                       "    }\n" +
+                       "}";
+        doTest(before, after);
+    }
+    
+    public void testFieldNotInitializedInAllConstructors() {
+        final String content = "class Test {\n" +
+                         "    String fi<caret>eld;\n" +
+                         "    Test() {\n" +
+                         "        field = \"initialized\";\n" +
+                         "    }\n" +
+                         "    Test(String value) {\n" +
+                         "        // 这个构造器没有初始化 field\n" +
+                         "    }\n" +
+                         "}";
+        // 不应该添加 final，因为并非所有构造器都初始化了字段
+        doTestNoChange(content);
+    }
+    
+    public void testFieldWithoutInitializerAndNoConstructor() {
+        final String content = "class Test {\n" +
+                         "    String fi<caret>eld;\n" +
+                         "}";
+        // 没有显式构造器且字段没有初始化器，不应该添加 final
+        doTestNoChange(content);
+    }
+    
+    public void testStaticFieldWithInitializer() {
+        final String before = "class Test {\n" +
+                        "    static String fi<caret>eld = \"initialized\";\n" +
+                        "}";
+        final String after = "class Test {\n" +
+                       "    static final String field = \"initialized\";\n" +
+                       "}";
+        doTest(before, after);
+    }
+    
+    public void testStaticFieldWithoutInitializer() {
+        final String content = "class Test {\n" +
+                         "    static String fi<caret>eld;\n" +
+                         "}";
+        // 静态字段没有初始化器，不应该添加 final
+        doTestNoChange(content);
+    }
+    
+    public void testClassWithMixedFields() {
+        final String before = "class Te<caret>st {\n" +
+                        "    String field1 = \"initialized\";\n" +
+                        "    String field2;\n" +
+                        "    static String field3 = \"static\";\n" +
+                        "    static String field4;\n" +
+                        "    Test() {\n" +
+                        "        field2 = \"constructor\";\n" +
+                        "    }\n" +
+                        "}";
+        final String after = "class Test {\n" +
+                       "    final String field1 = \"initialized\";\n" +
+                       "    final String field2;\n" +
+                       "    static final String field3 = \"static\";\n" +
+                       "    static String field4;\n" +
+                       "    Test() {\n" +
+                       "        field2 = \"constructor\";\n" +
+                       "    }\n" +
+                       "}";
+        doTest(before, after);
     }
 
 
